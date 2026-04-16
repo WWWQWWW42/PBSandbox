@@ -28,7 +28,8 @@ app.get('/', (req, res) => {
     res.json({
         status: 'ok',
         message: 'Sandbox Proxy Server is running',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        hasApiKey:!!PADDLE_API_KEY
     });
 });
 
