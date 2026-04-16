@@ -1,0 +1,272 @@
+*{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: system-ui, 'Segoe UI', 'Inter', -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
+}
+
+body{
+    background: linear-gradient(145deg, #f1f5f9 0%, #e4e9f2 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+}
+
+/*主卡片容器*/
+.card{
+    max-width: 520px;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.97);
+    backdrop-filter: blur(0px);
+    border-radius: 2rem;
+    box-shadow: 0 25px 45px -12px rgba(0,0,0,0.25), 0 8px 18px rgba(0,0,0,0.05);
+    overflow: hidden;
+    transition: all 0.2s ease;
+}
+
+/*头部装饰*/
+.header{
+    background:#0b2b3b;
+    padding: 1.6rem 2rem;
+    color: white;
+}
+
+.header h1{
+    font-size: 1.7rem;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.header h1:before{
+    content: "⚡️";
+    font-size: 1.8rem;
+}
+
+.header p{
+    font-size: 0.9rem;
+    opacity: 0.8;
+    margin-top: 0.5rem;
+}
+
+/*内容*/
+.content {
+    padding: 2rem 2rem 2rem 2rem;
+}
+
+/*表单*/
+.form-group{
+    margin-bottom: 1.8rem;
+}
+
+label{
+    display: block;
+    font-weight: 600;
+    color:#1e293b;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.email-input-wrapper{
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+input[type="email"]{
+    flex: 1;
+    padding: 0.9rem 1rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 1.5rem;
+    font-size: 1rem;
+    background: #ffffff;
+    transition: 0.2s;
+    outline: none;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+input[type="email"]:focus{
+    border-color: #0f6b8c;
+    box-shadow: 0 0 0 3px rgba(15,107,140,0.2);
+}
+
+button{
+    background: #0f6b8c;
+    border: none;
+    padding: 0.9rem 1.6rem;
+    border-radius: 2rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+button:hover{
+    background: #0a4f69;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(0,0,0,0.1);
+}
+
+button:active{
+    transform:translateY(1px);
+}
+
+.btn-secondary{
+    background: #475569;
+}
+
+.btn-secondary:hover{
+    background: #334155;
+}
+
+.btn-outline{
+    background: transparent;
+    border: 1px solid #cbd5e1;
+    color: #1e293b;
+    box-shadow: none;
+}
+
+/*消息区域*/
+.message-area{
+    margin-top: 1.5rem;
+    padding: 0.8rem 1rem;
+    border-radius: 1.2rem;
+    background: #f8fafc;
+    font-size: 0.85rem;
+    color: #334155;
+    border-left: 4px solid #cbd5e1;
+    transition: all 0.2s;
+}
+
+.message-area.error{
+    background: #fff1f0;
+    border-left-color: #e53e3e;
+    color: #c53030;
+}
+
+.message-area.success{
+    background: #e6f7ec;
+    border-left-color:#2c7a4d ;
+    color: #1e3a8a;
+}
+
+/*询问卡片*/
+.comfirm-card{
+    background: #ffffff;
+    border-radius: 1.5rem;
+    padding: 1.2rem 1.2rem;
+    margin-top: 1.5rem;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 10px 20px -8px rgba(0,0,0,0.1);
+}
+
+.confirm-card{
+    font-weight: 500;
+    margin-bottom: 1rem;
+}
+
+.confirm-actions{
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+}
+
+/*商品页*/
+.products-page{
+    animation: fadeIn 0.3s ease;
+}
+
+.product-grid{
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin: 1.5rem 0;
+}
+
+.product-item{
+    background: #f9f9fc;
+    border-radius: 1.2rem;
+    padding: 1rem 1.2rem;
+    border: 1px solid #eef2f6;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: 0.1s;
+}
+
+.product-name{
+    font-weight: 600;
+    color: #0b2b3b;
+}
+
+.product-price{
+    font-weight: 700;
+    color: #0f6b8c;
+}
+
+.badge{
+    background: #e2f0f5;
+    padding: 0.25rem 0.8rem;
+    border-radius: 2rem;
+    font-size: 0.8rem;
+    color: #0f6b8c;
+}
+
+@keyframes fadeIn{
+    from{opacity: 0; transform: translateY(8px);}
+    to {opacity: 1; transform: translateY(0);}
+}
+
+hr{
+    margin: 1rem 0;
+    border: 0;
+    height: 1px;
+    background: #e2e8f0;
+}
+
+.back-link button{
+    background: none;
+    color: #0f6b8c;
+    box-shadow: none;
+    padding: 0.4rem 1rem;
+    font-size: 0.85rem;
+}
+
+.back-link button:hover{
+    background: #eef2ff;
+    transform: none;
+}
+
+footer{
+    font-size: 0.7rem;
+    text-align: center;
+    padding: 1rem;
+    background: #f1f5f9;
+    color: #5b6e8c;
+}
+
+.info-note{
+    font-size: 0.75rem;
+    color: #5b6e8c;
+    text-align: center;
+    margin-top: 1rem;
+}
+
+.badge-light{
+    background: #e2f0f5;
+    padding: 0.2rem 0.7rem;
+    border-radius: 2rem;
+    font-size: 0.7rem;
+    color: #0f6b8c;
+    display: inline-block;
+}

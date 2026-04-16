@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=yes">
+    <title>User Validatation</title>
+    <link href="./resources/css/main.css" type="text/css" rel="stylesheet">
+</head>
+<body>
+    <div class="card" id="appRoot">
+        <div class="header">
+            <h1>Paddle Billing</h1>
+            <p>Sandbox</p>
+        </div>
+        <div id="dynamicContent" class="content">
+            <!--动态内容将由js渲染-->
+            <div style="text-align: center;padding: 2rem;">Loading...</div>
+        </div>
+        <footer>
+            Sandbox with backend proxy
+        </footer>
+    </div>
+
+    <script>
+        //-------后端代理配置------
+        //1. GET https://sandbox-api.paddle.com/customers?email=xxx
+        //2. POST https://sandbox-api.paddle.com/customers body:{email}
+        const PROXY_CONFIG={
+            baseUrl:'http://localhost:3000/api/paddle',
+        };
+
+        //商品页路径
+        const PRODUCTS_PAGE_URL='products.html';
+
+        //状态管理
+        let currentView='email-form' //email-form, confirm-create, products
+        let currentEmail='';  //存储当前处理的邮箱
+        let currentCustomer=null; //存储从api返回的用户信息
+        let lastActionType=null; //existing或created用于询问页面的友好提示
+
+        //获取dom动态容器
+        const dynamicContainer=document.getElementById('dynamicContent');
+
+        //辅助函数 显示消息
+        function setMessage(element,text,type='info'){
+            if(!element)return;
+            element.innerText=text;
+            element.className=`message-area ${type}`;
+            if(type === 'loading') element.innerHTML=`<span>⏳${text}</span>`;
+            else if(type==='error') element.innerHTML=`<span>⚠️${text}</span>`;
+            else if(type==='success') element.innerHTML=`<span>✅${text}</span>`;
+            else element.innerHTML=`<span>❕${text}`;
+        }
+
+        //简单的防XSS
+        function escapeHtml(str){
+            if(!str)return'';
+            return str.replace(/[&<>]/g,function(m){
+                if(m==='&') return '&amp;';
+                if(m==='<') return '&lt;';
+                if(m==='>') return '&gt;';
+                return m;
+            });
+        }
+
+        //通过API调用查询用户
+        async function fetchCustomerByEmail(email) {
+            const url=`${PROXY_CONFIG.baseUrl}/customers?email=${encodeURIComponent(email)}`;
+            const response=await fetch(url,{
+                method:'GET',
+                headers:{
+                    'Content-Type':'application/json',
+                    'Accept':'application/json'
+                }
+            });
+            if(!response.ok){
+                let errorMsg=`HTTP ${response.status}`;
+                try{
+                    const errData=await response.json();
+                    errorMsg=errData.message||errData.error||errorMsg;
+                }catch(e){}
+                throw new Error(`failed to get customer: ${errorMsg}`);
+            }
+            const data=await response.json();
+
+            //需求：如果有结果则进入商品页面
+            let customersLists=[];
+            if(Array.isArray(data)){
+                customersList=data;
+            }else if(data && Array.isArray(data.data)){
+                customersList=data.data;
+            }else if(data && data.customers && Array.isArray(data.customers)){
+                customersList=data.customers;
+            }else{
+                customersList=[];
+            }
+            //查找email完全匹配的客户
+            const matchedCustomer=customersList.find(cust=>cust.email && cust.email.toLowerCase()===email.toLowerCase());
+            return matchedCustomer || null
+        }
+
+        //创建客户
+        async function createCustomer(email) {
+            const url=`${PROXY_CONFIG.baseUrl}/customers`;
+            const response=await fetch(url,{
+                method:'POST',
+                headers:{
+                    'Content-Type':'application/json',
+                    'Accept':'application/json'
+                },
+                body: JSON.stringify({email:email})
+            });
+            if(!response.ok){
+                let errorMsg=`HTTP ${response.status}`;
+                try{
+                    const errData=await response.json();
+                    errorMsg=errData.message||errData.error||errorMsg;
+                }catch(e){}
+                throw new Error(`Failed to create customer: ${errorMsg}`);
+            }
+            const newCustomer=await response.json();
+            return newCustomer;
+            
+        }
+
+        //=======询问用户是否进入商品页（核心UI）======
+        //如果api得到结果--询问是否进入商品页
+        //如果创建成功--询问是否进入商品页
+        //如果用户同意，跳转到products.html;如果用户不同意，返回最开始的界面
+        function renderAskEnterShopPage(email,customer,sourceType){
+            currentView='ask-enter-shop';
+            currentEmail=email;
+            currentCustomer=customer;
+            lastActionType=sourceType;//existing or created
+
+            let titleMessage='';
+            let subMessage='';
+            if(sourceType==='existing'){
+                titleMessage='✅Validation successful. Found your account!';
+                subMessage=`Welcome back, ${escapeHtml(email)} Validation passed`;
+            }else{
+                titleMessage='New User Created';
+                subMessage=`Email ${escapeHtml(email)} Signup successful`;
+            }
+            dynamicContainer.innerHTML=`
+            <div class="confirm-card">
+                <div style="margin-bottom: 0.8rem;">
+                    <span class="badge-light">${sourceType==='existing'?'existing customer':'new registered user'}</span>
+                    </div>
+                    <p style="font-size:1.1rem; font-weight:600;">${titleMessage}</p>
+                    <p>${subMessage}</p>
+                    <hr>
+                    <p style="margin:0.5rem 0 0.8rem 0;">Enter Products Page?</p>
+                    <div class="confirm-actions">
+                        <button id="declineShopBtn" class="btn-outline">Not Now</button>
+                        <button id="acceptShopBtn" class="btn-success">Enter Products Page</button>
+                        </div>
+                        <div id="shopAskMessage" class="message-area" style="margin-top:1rem;display:none;"></div>
+                        </div>
+                        `;
+
+                        const acceptBtn=document.getElementById('acceptShopBtn');
+                        const declineBtn=document.getElementById('declineShopBtn');
+
+                        //用户同意进入商品页--跳转到products.html
+                        acceptBtn.addEventListener('click',()=>{
+                            //存储客户信息到sessionStorage,供商品页使用
+                            const customerData={
+                                email:email,
+                                customerId:customer?.id||'temp_'+Date.now(),
+                                customerName:customer?.name||email.split('@')[0],
+                                fullCustomer:customer||{email},
+                                verifiedAt:new Date().toISOString()
+                            };
+                            sessionStorage.setItem('paddle_customer_data',JSON.stringify(customerData));
+
+                            //显示跳转提示
+                            const msgDiv=document.getElementById('shopAskMessage');
+                            setMessage(msgDiv,'🌟Jumping to Products page...','success');
+                            acceptBtn.disabled=true;
+                            declineBtn.disabled=true;
+
+                            //延迟跳转，让用户看到提示
+                            setTimeout(()=>{
+                                window.location.href=PRODUCTS_PAGE_URL;
+                            },500);
+                        });
+                            
+                        declineBtn.addEventListener('click',()=>{
+                            //暂不进入商品页
+                            const msgDiv=document.getElementById('shopAskMessage');
+                            setMessage(msgDiv,'Not entering Products Page','info');
+                            declineBtn.disabled=true;
+                            acceptBtn.disabled=true;
+
+                            //延迟跳转，让用户看到提示
+                            setTimeout(()=>{
+                                resetToEmailForm();
+                            },800);
+                        });
+                    }
+                            
+                    
+
+        //重置整个流程到邮箱输入界面
+        function resetToEmailForm(){
+            currentView='email-form';
+            currentEmail='';
+            currentCustomer=null;
+            lastActionType=null;
+            renderEmailForm(false,null);
+        }
+
+        //询问是否创建新用户界面
+        function renderConfirmCreate(email){
+            currentView='confirm-create';
+            currentEmail=email;
+            dynamicContainer.innerHTML=`
+            <div class="confirm-card">
+                <p>Couldn't find <strong>${escapeHtml(email)}</strong></p>
+                <p>Use this email address to create new customer?</p>
+                <div class="confirm-actions">
+                    <button id="cancelCreateBtn" class="btn-outline">Cancel. Return to previous step</button>
+                    <button id="confirmCreateBtn">Create new customer</button>
+                    </div>
+                    <div id="createConfirmMessage" class="message-area" style="margin-top:1rem;display:none;"></div>
+                    </div>
+                    `;
+
+                    const confirmBtn=document.getElementById('confirmCreateBtn');
+                    const cancelBtn=document.getElementById('cancelCreateBtn');
+                    const msgDiv=document.getElementById('createConfirmMessage');
+
+                    confirmBtn.addEventListener('click',async()=>{
+                        confirmBtn.disabled=true;
+                        cancelBtn.disabled=true;
+                        if(msgDiv) setMessage(msgDiv, 'Creating customer now. Please hold...','loading');
+                        try{
+                            const newCustomer=await createCustomer(currentEmail);
+                            //创建成功
+                            if(msgDiv) setMessage(msgDiv,'Customer created successfully','success');
+                            currentCustomer=newCustomer;
+                            //创建成功后，询问是否进入商品页
+                            renderAskEnterShopPage(currentEmail,newCustomer,'created');
+                        }catch(err){
+                            console.error('Failed to create customer: ',err);
+                            let errorMessage=err.message||'Customer creation failed in backend';
+                            if(msgDiv) setMessage(msgDiv,errorMessage,'error');
+                            confirmBtn.disabled=false;
+                            cancelBtn.disabled=false;
+                        }
+                    });
+                    
+                    cancelBtn.addEventListener('click',()=>{
+                        //返回邮箱表单
+                        resetToEmailForm();
+                    });
+        }
+
+        //主界面：邮箱输入表单
+        function renderEmailForm(loading=false,errorMsg=null){
+            currentView='email-form';
+            dynamicContainer.innerHTML=`
+            <div>
+                <div class="form-group">
+                    <label>Email address</label>
+                    <div class="email-input-wrapper">
+                        <input type="email" id="emailInput" placeholder="your@example.com" value="${escapeHtml(currentEmail)}" autocomplete="email" ${loading ?'disabled':''}>
+                        <button id="submitEmailBtn" ${loading?'disabled':""}>Validate and continue</button>
+                        </div>
+                        </div>
+                        <div id="emailFormMessage" class="message-area" style="display:${errorMsg?'block':'none'};">${errorMsg?escapeHtml(errorMsg):''}</div>
+                        <div class="message-area" style="margin-top:0.8rem;background:#fef9e3;border-left-color:#fbbf24;">
+                            All requests were processed by proxy
+                            </div>
+                            </div>
+                            `;
+                            if(errorMsg){
+                                const msgDiv=document.getElementById('emailFormMessage');
+                                if(msgDiv)setMessage(msgDiv,errorMsg,'error');
+                            }
+
+                            const emailInput=document.getElementById('emailInput');
+                            const submitBtn=document.getElementById('submitEmailBtn');
+
+                            if(submitBtn && emailInput){
+                                submitBtn.addEventListener('click',async()=>{
+                                    const email=emailInput.value.trim();
+                                    if(!email || !/^\S+@\S+\.\S+$/.test(email)){
+                                        const msgDiv=document.getElementById('emailFormMessage');
+                                        setMessage(msgDiv,'Please enter valid email address','error');
+                                        return;
+                                    }
+                                    currentEmail=email;
+                                    //显示加载状态
+                                    renderEmailForm(true, null);
+                                    const msgDivLoading=document.getElementById('emailFormMessage');
+                                    if(msgDivLoading)setMessage(msgDivLoading,'Checking customer info via proxy','loading');
+                                    try{
+                                        //调用后端查询
+                                        const existingCustomer=await fetchCustomerByEmail(email);
+                                        if(existingCustomer){
+                                            currentCustomer=existingCustomer;
+                                            renderAskEnterShopPage(email,existingCustomer,'existing');
+                                        }else{
+                                            renderConfirmCreate(email);
+                                        }
+                                    }catch(err){
+                                        console.error('Unexpected error with checking customer info:',err);
+                                        let errText=err.message||'Proxy failure';
+                                        renderEmailForm(false,errText);
+                                    }
+                                });
+                            }
+
+                            if(emailInput&&currentEmail){
+                                emailInput.value=currentEmail;
+                            }
+        }
+
+        //初始化界面
+        function init(){
+            //检查代理配置提示
+            if(PROXY_CONFIG.baseUrl==='/api/paddle'&&window.location.protocol!=='file:')
+        {
+            console.warn('[Hint]Current proxy address is "/api/paddle",Please make sure the proxy is correctly configured.');
+        }
+        renderEmailForm(false,null);
+        }
+
+        init();
+        
+    </script>
+</body>
+</html>

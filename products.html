@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="vireport" content="width=device-width,initial-scale=1.0,user-scalable=yes">
+    <link href="./resources/css/products.css" type="text/css" rel="stylesheet">
+    <script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
+    <title>Paddle Billing Sandbox Shop</title>
+</head>
+
+<body>
+    <div class="shop-container">
+        <div class="shop-header">
+            <h1>Paddle Sandbox</h1>
+            <p>Paddle Billing Checkout</p>
+            <div class="customer-badge" id="customerInfo">Loading User Info...</div>
+        </div>
+
+        <div id="productsContainer">
+            <div class="loading-indicator">
+                <div class="loading-spinner"></div>
+                <p style="margin-top: 1rem;">Loading Products...</p>
+            </div>
+        </div>
+
+        <div class="action-bar">
+            <button class="back-home-btn" onclick="goBackToHome()">
+                Back to Homepage
+            </button>
+        </div>
+        <footer>
+            All transactions are in sandbox. Test only.
+            <br>
+            <span style="font-size: 0.7rem;">Type: Recurring with no trial, Recurring with trial, One-off | Variant:
+                one-page, multi-page | Display: inline, overlay</span>
+        </footer>
+    </div>
+
+    <script>
+        //PRODUCT PRICES
+        const PRICE_IDS={
+            product1:'pri_01knrg11chj8feqjzfqzn2d61h',
+            product2:'pri_01knrg1synnrb08wtf8f7wh5js',
+            product3:'pri_01knrg29typ9w9n3fd3n8rzrwe'
+        };
+
+        //Token
+        const PADDLE_TOKEN='test_8dd516f5d0dbc362da246c3e48b';
+
+
+        //=============全局变量================
+        let paddleInitialized = false;
+        let activeInlineContainers = {};
+
+        //=============Paddle初始化============
+        function initPaddle() {
+            return new Promise((resolve, reject) => {
+                if (paddleInitialized && window.paddle) {
+                    resolve();
+                    return;
+                }
+
+                const checkInterval = setInterval(() => {
+                    if (window.Paddle) {
+                        clearInterval(checkInterval);
+                        try {
+                            Paddle.Environment.set('sandbox');
+                            Paddle.Initialize({
+                                token: 'test_8dd516f5d0dbc362da246c3e48b'
+                            });
+                            paddleInitialized = true;
+                            console.log('Paddle initiated successfully');
+                            resolve();
+                        } catch (err) {
+                            console.error('Paddle Initialization error:', err);
+                            reject(err);
+                        }
+                    }
+                }, 100);
+
+                setTimeout(() => {
+                    clearInterval(checkInterval);
+                    if (window.Paddle) {
+                        reject(new Error('Paddle failed to load'));
+                    }
+                }, 10000);
+            });
+        }
+
+        //=============商品数据配置==============
+        const products = [
+            {
+                id: 1,
+                name: "Monthly with no trial",
+                price: "$10",
+                originalPrice: "$12",
+                description: "$10/monthly with no trial",
+                icon: "⚡️",
+                badge: "No trial",
+                priceId: "pri_01knrg11chj8feqjzfqzn2d61h",
+                checkoutOptions: [
+                    {
+                        id: "overlay_multi",
+                        name: "Overlay",
+                        variantDesc: "multi-page",
+                        modeDesc:"Overlay",
+                        displayMode: "overlay",
+                        variant: "multi-page",
+                        icon: "🐱"
+                    },
+                    {
+                        id: "overlay_one",
+                        name: "Overlay",
+                        variantDesc: "one-page",
+                        modeDesc:"Overlay",
+                        displayMode: "overlay",
+                        variant: "one-page",
+                        icon: "🐶"
+                    },
+                    {
+                        id: "inline_multi",
+                        name: "Inline",
+                        variantDesc: "multi-page",
+                        modeDesc:"Inline",
+                        displayMode: "inline",
+                        variant: "multi-page",
+                        icon: "🌧️"
+                    },
+                    {
+                        id: "inline_one",
+                        name: "Inline",
+                        variantDesc: "one-page",
+                        modeDesc:"Inline",
+                        displayMode: "inline",
+                        variant: "one-page",
+                        icon: "🌞"
+                    }
+                ]
+            },
+            {
+                id: 2,
+                name: "Monthly with trial",
+                price: "$8",
+                originalPrice: "$10",
+                description: "$8/monthly with 1-day trial",
+                icon: "☁️",
+                badge: "trial",
+                priceId: "pri_01knrg1synnrb08wtf8f7wh5js",
+                checkoutOptions: [
+                    {
+                        id: "overlay_multi",
+                        name: "Overlay",
+                        variantDesc: "multi-page",
+                        modeDesc:"Overlay",
+                        displayMode: "overlay",
+                        variant: "multi-page",
+                        icon: "🐱"
+                    },
+                    {
+                        id: "overlay_one",
+                        name: "Overlay",
+                        variantDesc: "one-page",
+                        modeDesc:"Overlay",
+                        displayMode: "overlay",
+                        variant: "one-page",
+                        icon: "🐶"
+                    },
+                    {
+                        id: "inline_multi",
+                        name: "Inline",
+                        variantDesc: "multi-page",
+                        modeDesc:"Inline",
+                        displayMode: "inline",
+                        variant: "multi-page",
+                        icon: "🌧️"
+                    },
+                    {
+                        id: "inline_one",
+                        name: "Inline",
+                        variantDesc: "one-page",
+                        modeDesc:"Inline",
+                        displayMode: "inline",
+                        variant: "one-page",
+                        icon: "🌞"
+                    }
+                ]
+            },
+            {
+                id: 3,
+                name: "One-off Token",
+                originalPrice: "$6",
+                price: "$5",
+                description: "$5 one-off",
+                icon: "🪙",
+                badge: "one-off",
+                priceId: "pri_01knrg29typ9w9n3fd3n8rzrwe",
+                checkoutOptions: [
+                    {
+                        id: "overlay_multi",
+                        name: "Overlay",
+                        variantDesc: "multi-page",
+                        modeDesc:"Overlay",
+                        displayMode: "overlay",
+                        variant: "multi-page",
+                        icon: "🐱"
+                    },
+                    {
+                        id: "overlay_one",
+                        name: "Overlay",
+                        variantDesc: "one-page",
+                        modeDesc:"Overlay",
+                        displayMode: "overlay",
+                        variant: "one-page",
+                        icon: "🐶"
+                    },
+                    {
+                        id: "inline_multi",
+                        name: "Inline",
+                        variantDesc: "multi-page",
+                        modeDesc:"Inline",
+                        displayMode: "inline",
+                        variant: "multi-page",
+                        icon: "🌧️"
+                    },
+                    {
+                        id: "inline_one",
+                        name: "Inline",
+                        variantDesc: "one-page",
+                        modeDesc:"Inline",
+                        displayMode: "inline",
+                        variant: "one-page",
+                        icon: "🌞"
+                    }
+                ]
+            }
+        ];
+
+        //显示toast消息
+        let toastTimeout = null;
+        function showToast(message, type = 'success') {
+            const existingToast = document.querySelector('.toast-message');
+            if (existingToast) existingToast.remove();
+
+            const toast = document.createElement('div');
+            toast.className = `toast-message ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            if (toastTimeout) clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        //结账成功回调
+        function handleCheckoutSuccess(data) {
+            console.log('Checkout successful:', data);
+            showToast(`🌟Purchase success! Thank you! Transaction ID: ${data.transaction_id || 'Created'}`, 'success');
+        }
+
+        //结账错误回调
+        function handleCheckoutError(error) {
+            console.error('Checkout error:', error);
+            showToast(`❌Failed to complete checkout: ${error.message || 'Please try again later'}`, 'error');
+        }
+
+        //关闭回调
+        function handleCheckoutClose(){
+            console.log('Checkout closed');
+        }
+
+        //获取当前客户邮箱
+        function getCustomerEmail() {
+            const storedData = sessionStorage.getItem('paddle_customer_data');
+            if (storedData) {
+                try {
+                    const customer = JSON.parse(storedData);
+                    return customer.email || '';
+                } catch (e) {
+                    return '';
+                }
+            }
+            return '';
+        }
+
+        //关闭inline容器
+        function closeAllInlineContainers() {
+            Object.keys(activeInlineContainers).forEach(containerId => {
+                const container = document.getElementById(containerId);
+                if (container) {
+                    container.classList.remove('active');
+                    container.innerHTML = '';
+                }
+            });
+            activeInlineContainers = {};
+        }
+
+        //打开Paddle Checkout Overlay
+        function openOverlayCheckout(product, option) {
+            //验证price
+            if(!product.priceId){
+                showToast('Please configure price id','error');
+                console.error('Invalid price id for product ',product.name);
+                return;
+            }
+
+            //构建items
+            const items = [{
+                priceId: product.priceId,
+                quantity: 1
+            }];
+
+            //构建settings
+            const settings = {
+                displayMode: option.displayMode,
+                variant: option.variant,
+                theme: "light",
+                locale: "en"
+            };
+
+            //构建customer
+            const customerEmail = getCustomerEmail();
+            const customer = customerEmail ? { email: customerEmail } : undefined;
+
+            //构建checkout参数
+            const checkoutConfig = {
+                items: items,
+                settings: settings,
+                successCallback:handleCheckoutSuccess,
+                errorCallback:handleCheckoutError,
+                closeCallback:handleCheckoutClose
+            };
+
+            //如果有邮箱，添加到配置中
+            if (customer) {
+                checkoutConfig.customer = customer;
+            }
+
+            console.log('Opening checkout:', JSON.stringify(checkoutConfig,null,2));
+
+            try {
+                Paddle.Checkout.open(checkoutConfig);
+                const modeText = `${option.displayMode}/${option.variant}`;
+                showToast(`Opening ${product.name}(${modeText})`, 'success');
+            } catch (error) {
+                console.error('Failed to open checkout:', error);
+                showToast(`Unable to open checkout:${error.message}`, 'error');
+            }
+        }
+
+        //Open inline
+        async function openInlineCheckout(product, option, containerId) {
+            //验证price
+            if(!product.priceId){
+                showToast('Please configure price for product ',product.name);
+                return;
+            }
+
+            //关闭其他inline
+            closeAllInlineContainers();
+
+            const container = document.getElementById(containerId);
+            if (!container) {
+                console.error('Container not found:', containerId);
+                return;
+            }
+
+            //显示容器并清空内容
+            container.classList.add('active');
+            container.innerHTML = '<div style="text-align:center;padding:2rem;"><div class="loading-spinner"></div><p style="margin-top:1rem;">Loading Products Page...</p></div>';
+
+            //itms
+            const items=[{
+                priceId:product.priceId,
+                quantity:1
+            }];
+
+            //settings
+            const settings={
+                displayMode:'inline',
+                variant:option.variant,
+                theme:"dark",
+                locale:"en",
+                frameTarget:containerId,
+                frameInitialHeight:"550",
+                frameStyle:"width:100%;min-width:312px;background-color:transparent;border:none;"
+            };
+
+            //customer
+            const customerEmail=getCustomerEmail();
+            const customer=customerEmail?{email:customerEmail}:undefined;
+
+            const checkoutConfig={
+                items:items,
+                settings:settings,
+                successCallback:handleCheckoutSuccess,
+                errorCallback:(error)=>{
+                    console.error('Inline checkout error: ', error);
+                    handleCheckoutError(error);
+                    container.classList.remove('active');
+                    container.innerHTML=`<div style="text-align:center;padding:1rem;color:#e53e3e;">Checkout Loading Failed: ${error.message || 'Please try again'}</div>`;
+                    delete activeInlineContainers[containerId];
+                },
+                closeCallback:()=>{
+                    console.log('Inline checkout closed');
+                    container.classList.remove('active');
+                    container.innerHTML='';
+                    delete activeInlineContainers[containerId];
+                }
+            };
+
+            if(customer){
+                checkoutConfig.customer=customer;
+            }
+
+            console.log('Opening inline chekcout:', JSON.stringify(checkoutConfig,null,2));
+
+            try{
+                Paddle.Checkout.open(checkoutConfig);
+                activeInlineContainers[containerId]=true;
+                const modeText=`Inline+${option.variant}`;
+                showToast(`Loading ${product.name}(${modeText})`,'info');
+            }catch(error){
+                console.error('Failed to open inline checkout:',error);
+                container.classList.remove('active');
+                container.innerHTML=`<div style="text-align:center;padding:1rem;color:#e53e3e;">Checkout Loading Failed: ${error.message || 'Please try again'}</div>`;
+                showToast(`Unable to load Inline checkout: ${error.message}`,'error');
+            }
+        }
+
+        //按钮样式
+        function getOptionClass(optionId) {
+            const map = {
+                'overlay_multi': 'option-overlay-multi',
+                'overlay_one': 'option-overlay-one',
+                'inline_multi': 'option-inline-multi',
+                'inline_one': 'option-inline-one'
+            };
+            return map[optionId] || 'option-overlay-multi';
+        }
+
+        //获取显示文本
+        function getDisplayText(option){
+            const displayIcon=option.displayMode === 'overlay' ? '🪟':'📄';
+            const variantIcon=option.variant === 'multi-page' ? '📁':'📄';
+            const modeName=option.displayMode === 'overlay'?'Overlay':'Inline';
+            const variantName = option.variant === 'multi-page' ? 'Multi-page' : 'One-page';
+            return `${displayIcon} ${modeName} · ${variantIcon} ${variantName}`;
+        }
+
+
+        //商品页面
+        function renderProducts() {
+            const container = document.getElementById('productsContainer');
+            if (!container) return;
+
+            let html = '<div class="products-grid">';
+
+            products.forEach(product => {
+                //计算折扣百分比
+                let discountHtml = '';
+                if (product.originalPrice) {
+                    const originalNum = parseFloat(product.originalPrice.replace('$', ''));
+                    const currentNum = parseFloat(product.price.replace('$', ''));
+                    if (!isNaN(originalNum) && !isNaN(currentNum) && originalNum > currentNum) {
+                        const discount = Math.round((1 - currentNum / originalNum) * 100);
+                        discountHtml = `<span style="font-size:0.75rem;color:#e53e3e;margin-left:0.5rem;">-${discount}%</span>`;
+                    }
+                }
+
+                //生成四个checkout选项按钮
+                let checkoutOptionsHtml = '';
+                product.checkoutOptions.forEach(option => {
+                    const optionClass = getOptionClass(option.id);
+                    const displayText=getDisplayText(option);
+                    checkoutOptionsHtml += `
+                    <button class="checkout-option ${optionClass}"
+                    data-product-id="${product.id}"
+                    data-option-id="${option.id}"
+                    data-display-mode="${option.displayMode}"
+                    data-variant="${option.variant}">
+                    <div class="option-theme">
+                        ${displayText} 
+                        <span class="mode-badge">${option.displayMode}/${option.variant}</span>
+                        </div>
+                        <div class="option-desc">${option.displayMode === 'overlay' ? 'Overlay' : 'Inline'} · ${option.variant === 'multi-page' ? 'Multi-page' : 'One-page'}</div>
+                        </button>
+                        `;
+                });
+
+                const inlineContainerId = `inline-container-${product.id}`;
+
+                html += `
+                <div class="product-card" data-product-id="${product.id}">
+                    <div class="product-image">
+                        <span style="font-size:4rem;">${product.icon}</span>
+                        <span class="product-badge">${product.badge}</span>
+                        </div>
+                        <div class="product-info">
+                            <div class="product-title">
+                                ${product.name}
+                                <div>
+                                    <span class="product-price">${product.price}</span>
+                                    ${product.originalPrice ? `<small style="text-decoration:line-through;color:#94a3b8;margin-left:0.5rem;">${product.originalPrice}</small>` : ''}
+                                    ${discountHtml}
+                                    </div>
+                                    </div>
+                                    <div class="product-description">
+                                        ${product.description}
+                                        </div>
+                                        <div class="checkout-section">
+                                            <div class="checkout-label">
+                                                Select Checkout Style
+                                                </div>
+                                                <div class="checkout-grid" id="checkout-grid-${product.id}">
+                                                    ${checkoutOptionsHtml}
+                                                    </div>
+                                                    <div id="${inlineContainerId}" class="inline-checkout-container"></div>
+                                                    </div>
+                                                    </div>
+                                                    </div>
+                                                    `;
+            });
+
+            html += '</div>';
+            container.innerHTML = html;
+
+            //绑定结账按钮
+            products.forEach(product => {
+                product.checkoutOptions.forEach(option => {
+                    const buttons = document.querySelectorAll(`.checkout-option[data-product-id="${product.id}"][data-option-id="${option.id}"]`);
+                    buttons.forEach(btn => {
+                        btn.addEventListener('click', async (e) => {
+                            e.preventDefault();
+                            console.log(`Button clicked: ${option.displayMode} / ${option.variant}`);
+
+                            //确保初始化
+                            if (!paddleInitialized) {
+                                showToast('Initializing Paddle Checkout...', 'info');
+                                try {
+                                    await initPaddle();
+                                } catch (err) {
+                                    showToast('Paddle Initialization failed', 'error');
+                                    return;
+                                }
+                            }
+
+                            if (option.displayMode === 'overlay') {
+                                openOverlayCheckout(product,option);
+                            } else {
+                                const containerId = `inline-container-${product.id}`;
+                                await openInlineCheckout(product, option,containerId);
+                            }
+                        });
+                    });
+                });
+            });
+        }
+
+        //读取用户信息并显示
+        function loadCustomerInfo() {
+            const customerInfoDiv = document.getElementById('customerInfo');
+            const storedData = sessionStorage.getItem('paddle_customer_data');
+
+            if (storedData) {
+                try {
+                    const customer = JSON.parse(storedData);
+                    const email = customer.email || 'Validating Customer';
+                    const customerName = customer.customerName || email.split('@')[0];
+                    customerInfoDiv.innerHTML = `Welcome,<strong>${escapeHtml(customerName)}</strong>(${escapeHtml(email)})-Validated customer`;
+                    customerInfoDiv.style.background = 'rgba(44,122,77,0.2)';
+                } catch (e) {
+                    customerInfoDiv.innerHTML = `Guest mode(Please complete validation first)`;
+                    customerInfoDiv.style.background = 'rgba(255,255,255,0.15)';
+                }
+            } else {
+                customerInfoDiv.innerHTML = `Guest mode(Please return to home page to validate)`;
+                customerInfoDiv.style.background = 'rgba(255,255,255,0.15)';
+                showToast('Could not find customer information. Please return to home page', 'error');
+            }
+        }
+
+        //转义HTML
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function (m) {
+                if (m === '&') return '&map;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+
+        //返回首页
+        function goBackToHome() {
+            if (document.referrer && document.referrer.includes(window.location.hostname)) {
+                window.history.back();
+            } else {
+                window.location.href = 'sandboxindex.html';
+            }
+        }
+
+        //初始化页面
+        async function init() {
+            const container = document.getElementById('productsContainer');
+            if (container) {
+                container.innerHTML = '<div class="loading-indicator"><div class="loading-spinner"></div><p style="margin-top:1rem;">Initializing Paddle checkout...</p></div>';
+
+            }
+
+            try {
+                await initPaddle();
+                renderProducts();
+                loadCustomerInfo();
+                console.log('Paddle Products Page loaded');
+            } catch (err) {
+                console.error('Initialization error:', err);
+                if (container) {
+                    container.innerHTML = `
+                <div class="loading-indicator" style="color:#e53e3e;">
+                    <p>Checkout Initialization failed</p>
+                    <p style="font-size:0.85rem;margin-top:0.5rem;">Please refresh</p>
+                    <button onclick="location.reload()" style="margin-top:1rem;padding:0.5rem 1rem;background:#0f6b8c;color:white;border:none;border-radius:0.5rem;cursor:pointer;">Refresh Page</button>
+                    </div>
+                    `;
+                }
+                showToast('Checkout initialization failed. Please refresh page', 'error');
+            }
+        }
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    </script>
+</body>
